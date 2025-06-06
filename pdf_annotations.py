@@ -5,75 +5,24 @@ def extract_dimensions_from_pdf(pdf_path):
     doc = fitz.open(pdf_path)
     dimensions = []
     
-    # Patterns specifically for part dimensions
+    # Patterns for all common dimension types
     patterns = [
-        # Basic dimensions with decimal point or comma
-        r'(?<![A-Za-z])(\d+[.,]\d+|\d+)(?:\s*(?:mm|in|"|°|deg))?',
-        # Radius dimensions
-        r'R\s*(\d+[.,]\d+|\d+)',
-        # Diameter dimensions (multiple symbols)
-        r'[Ø⌀]\s*(\d+[.,]\d+|\d+)',
-        # Dimensions with text context
-        r'(?:THRU|THROUGH|TYP|TYPICAL|REF|REFERENCE)\s*(\d+[.,]\d+|\d+)',
-        # Dimensions with ±
-        r'[±]\s*(\d+[.,]\d+|\d+)',
-        # Dimensions in parentheses
-        r'\((\d+[.,]\d+|\d+)\)',
-        # Multiple instances (e.g., "2X 1.5")
-        r'(\d+)\s*[Xx]\s*(\d+[.,]\d+|\d+)',
-        # Angular dimensions
-        r'(\d+[.,]?\d*)\s*°',
+        # Diameter: Ø.201, ⌀.201, 8X Ø.201, 8X⌀.201, etc.
+        r'(\d+X)?\s*[Ø⌀]\s*([0-9]+[.,]?[0-9]*|[0-9]+/[0-9]+)',
+        # Radius: R2.250, R17/32
+        r'R\s*([0-9]+[.,]?[0-9]*|[0-9]+/[0-9]+)',
+        # Angles: 60°, 100°
+        r'([0-9]+[.,]?[0-9]*)\s*°',
+        # Linear: 4.50, 1,500, 3/16, .750, 10,06
+        r'(?<![A-Za-z0-9])([0-9]+[.,][0-9]+|[0-9]+/[0-9]+|[0-9]+)(?![A-Za-z0-9])',
+        # Thread callouts: 10-32 UNF, etc.
+        r'([0-9]+-[0-9]+)\s*[A-Za-z]+',
     ]
     
     compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
     
-    # Keywords to identify dimension types
-    dimension_keywords = {
-        'R': 'Radius',
-        'Ø': 'Diameter',
-        '⌀': 'Diameter',
-        'THRU': 'Through',
-        'THROUGH': 'Through',
-        'TYP': 'Typical',
-        'TYPICAL': 'Typical',
-        'REF': 'Reference',
-        'REFERENCE': 'Reference',
-        '°': 'Angle'
-    }
-    
-    # Keywords to exclude (title block, notes, etc.)
-    exclude_keywords = [
-        'DATE', 'REV', 'SCALE', 'SHEET', 'DWG', 'PART', 'MATERIAL', 'TOLERANCE',
-        'FINISH', 'FORMAT', 'PROJECT', 'APPROVED', 'DRAWN', 'CHECKED', 'TITLE',
-        'ECO', 'PRT', 'SERIES', 'NORME', 'ASME', 'Y14.5M', 'NOTES', 'REMARKS',
-        'DIMENSIONS', 'TOLERANCES', 'SURFACE', 'FINISH', 'MATERIAL', 'DRAWING',
-        'REVISION', 'CHANGE', 'APPROVAL', 'SIGNATURE', 'DRAWN BY', 'CHECKED BY',
-        'APPROVED BY', 'DATE', 'SCALE', 'SHEET', 'OF', 'TITLE', 'PART', 'NUMBER',
-        'DESCRIPTION', 'MATERIAL', 'FINISH', 'TOLERANCE', 'NOTES', 'REMARKS',
-        'DIMENSIONS', 'TOLERANCES', 'SURFACE', 'FINISH', 'MATERIAL', 'DRAWING',
-        'REVISION', 'CHANGE', 'APPROVAL', 'SIGNATURE', 'DRAWN BY', 'CHECKED BY',
-        'APPROVED BY', 'DATE', 'SCALE', 'SHEET', 'OF', 'TITLE', 'PART', 'NUMBER',
-        'DESCRIPTION', 'MATERIAL', 'FINISH', 'TOLERANCE', 'NOTES', 'REMARKS'
-    ]
-    
     for page_num in range(len(doc)):
         page = doc[page_num]
-        
-        # Get the page dimensions
-        page_width = page.rect.width
-        page_height = page.rect.height
-        
-        # Define the drawing area (excluding title block and notes)
-        # Typically, the drawing area is in the middle of the page
-        # Adjust these values based on your drawing layout
-        drawing_area = {
-            'x_min': page_width * 0.1,  # 10% from left
-            'x_max': page_width * 0.9,  # 10% from right
-            'y_min': page_height * 0.1,  # 10% from top
-            'y_max': page_height * 0.8   # 20% from bottom
-        }
-        
-        # Get text blocks with their positions
         blocks = page.get_text("dict")["blocks"]
         for block in blocks:
             if "lines" in block:
@@ -82,55 +31,49 @@ def extract_dimensions_from_pdf(pdf_path):
                         text = span["text"].strip()
                         if not text:
                             continue
-                        
-                        # Get position
-                        x, y = span["origin"]
-                        
-                        # Skip if outside drawing area
-                        if (x < drawing_area['x_min'] or x > drawing_area['x_max'] or
-                            y < drawing_area['y_min'] or y > drawing_area['y_max']):
-                            continue
-                        
-                        # Skip if text contains exclude keywords
-                        if any(keyword in text.upper() for keyword in exclude_keywords):
-                            continue
-                        
-                        # Try each pattern
                         for pattern in compiled_patterns:
-                            matches = pattern.finditer(text)
-                            for match in matches:
-                                # Get the full match and its context
-                                full_match = match.group(0)
-                                value = match.group(1) if len(match.groups()) > 0 else full_match
-                                
-                                # Determine dimension type
-                                dim_type = "Linear"
-                                for key, type_name in dimension_keywords.items():
-                                    if key in full_match.upper():
-                                        dim_type = type_name
-                                        break
-                                
-                                # Clean up the value
-                                value = value.strip()
-                                if value.replace(',', '').replace('.', '').isdigit():
-                                    # Get more context (surrounding text)
-                                    context_start = max(0, match.start() - 30)
-                                    context_end = min(len(text), match.end() + 30)
-                                    context = text[context_start:context_end].strip()
-                                    
-                                    dimensions.append({
-                                        'value': value,
-                                        'type': dim_type,
-                                        'context': context,
-                                        'page': page_num + 1,
-                                        'position': (x, y)
-                                    })
-    
-    return dimensions
+                            for match in pattern.finditer(text):
+                                raw = match.group(0)
+                                # Determine type
+                                if "Ø" in raw or "⌀" in raw:
+                                    dim_type = "Diameter"
+                                elif "R" in raw:
+                                    dim_type = "Radius"
+                                elif "°" in raw:
+                                    dim_type = "Angle"
+                                elif "-" in raw and any(x in raw for x in ["UNF", "UNC", "M"]):
+                                    dim_type = "Thread"
+                                elif "/" in raw:
+                                    dim_type = "Fraction"
+                                else:
+                                    dim_type = "Linear"
+                                value = raw.replace("Ø", "").replace("⌀", "").replace("R", "").replace("°", "").strip()
+                                dimensions.append({
+                                    'type': dim_type,
+                                    'value': value,
+                                    'raw': raw
+                                })
+
+    # Remove duplicates (by raw string)
+    seen = set()
+    unique_dimensions = []
+    for d in dimensions:
+        if d['raw'] not in seen:
+            unique_dimensions.append(d)
+            seen.add(d['raw'])
+
+    return unique_dimensions
 
 if __name__ == "__main__":
     pdf_path = r"C:\Users\Maxime Dumas\.cursor\PRT-044-0100-01.pdf"
     dimensions = extract_dimensions_from_pdf(pdf_path)
+
+    print("\nExtracted Dimensions:")
+    print("=" * 40)
+    for idx, dim in enumerate(dimensions, 1):
+        print(f"{idx:02d}. [{dim['type']}] {dim['value']}")
+
+    print(f"\nTotal unique dimensions found: {len(dimensions)}")
     
     # Group dimensions by type
     dim_by_type = {}
