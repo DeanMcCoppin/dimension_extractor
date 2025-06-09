@@ -1,0 +1,72 @@
+Categorized Dimensions Report
+========================================
+
+--- Drawing Dimensions ---
+01. [Diameter] 014190740
+02. [Diameter] 32
+03. [Diameter] 1
+04. [Diameter] 3
+05. [Diameter] 1
+06. [Diameter] 1
+07. [Radius] 3
+08. [Angle] 45
+09. [Thread] 8-32 UNC
+10. [Thread] 8-32 UNC
+11. [Fraction] 1/32
+12. [Linear] 1,219
+13. [Linear] 1,250
+14. [Linear] 1,250
+15. [Linear] 7,456
+16. [Linear] 3,728
+17. [Linear] 3,188
+18. [Linear] 2,510
+19. [Linear] 1,250
+20. [Linear] 1,250
+21. [Linear] 1,250
+22. [Linear] 1,250
+23. [Linear] 0.01
+24. [Linear] 3,33
+25. [Linear] 2,13
+26. [Linear] ,719
+27. [Linear] ,125
+28. [Linear] ,125
+29. [Linear] ,201
+30. [Linear] 1,41
+31. [Linear] ,313
+32. [Linear] ,156
+33. [Linear] ,136
+34. [Linear] ,547
+35. [Linear] ,453
+36. [Linear] ,344
+37. [Linear] ,156
+38. [Linear] ,136
+39. [Linear] ,422
+40. [Linear] ,328
+41. [Linear] ,344
+42. [Linear] 0.01
+43. [Linear] ,81
+44. [Linear] ,71
+45. [Linear] ,91
+46. [Linear] 250
+47. [Linear] 996
+48. [Linear] 32
+49. [Linear] 32
+50. [Linear] 45
+51. [Linear] 32
+52. [Linear] 63
+53. [Linear] 63
+54. [Linear] 8
+55. [Linear] 1
+56. [Linear] 8
+57. [Linear] 1
+58. [Linear] 1
+59. [Linear] 2
+60. [Linear] 3
+
+--- Part Numbers ---
+No part numbers found.
+
+--- General Tolerances ---
+No general tolerances found.
+
+Total items extracted: 60
